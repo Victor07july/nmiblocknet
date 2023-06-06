@@ -116,6 +116,9 @@ func (s *SmartContract) Invoke(stub shim.ChaincodeStubInterface) sc.Response {
 	} else if fn == "queryLedger" {
 		//execute a CouchDB query, args must include query expression
 		return s.queryLedger(stub, args)
+	} else if fn == "checkDate" {
+		//verify if a meter was created in a certain time
+		return s.checkDate(stub, args)
 	}
 
 	//function fn not implemented, notify error
@@ -145,7 +148,7 @@ func (s *SmartContract) registerMeter(stub shim.ChaincodeStubInterface, args []s
 	var currentTime = time.Now().String()
 
 	// Converts to byte
-	var currentTimeByte = []byte(currentTime)
+	var currentTimeAsBytes = []byte(currentTime)
 
 	//creates the meter record with the respective public key
 	var meter = Meter{PubKey: strpubkey}
@@ -155,11 +158,12 @@ func (s *SmartContract) registerMeter(stub shim.ChaincodeStubInterface, args []s
 
 	//registers meter in the ledger
 	stub.PutState(meterid, meterAsBytes)
-	stub.PutState(meterid, currentTimeByte)
+	stub.PutState(meterid, currentTimeAsBytes)
 
 	//loging...
 	fmt.Println("Registering meter: ", meter)
 	fmt.Println("Creation Date: ", currentTime)
+	fmt.Println("Creation Date (bytes): ", currentTimeAsBytes)
 
 	//notify procedure success
 	return shim.Success(nil)
@@ -519,6 +523,31 @@ func (s *SmartContract) queryLedger(stub shim.ChaincodeStubInterface, args []str
 
 	//notify procedure success
 	return shim.Success(buffer.Bytes())
+}
+
+func (s *SmartContract) checkDate(stub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	//validate args vector lenght
+	if len(args) != 1 {
+		return shim.Error("It was expected 1 parameter: <meter ID> <date>")
+	}
+
+	//gets date argument
+	date := args[0]
+
+	//checks if there is a corresponding date in ledger
+	dateBytes, err := stub.GetState(date)
+	if err != nil {
+		return shim.Error("Error on retrieving data state: " + err.Error())
+	}
+
+	//checks if state is empty
+	if dateBytes == nil {
+		return shim.Success([]byte("No corresponding date in ledger"))
+	}
+
+	//if date exists
+	return shim.Success([]byte("Date exists in ledger"))
 }
 
 /*
