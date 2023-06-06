@@ -145,10 +145,12 @@ func (s *SmartContract) registerMeter(stub shim.ChaincodeStubInterface, args []s
 	strpubkey := args[1]
 
 	// Receives the date of creation
-	var currentTime = time.Now().String()
+	var currentTime = time.Now()
+	var y, m, d = currentTime.Date()
+	creationDate := fmt.Sprintf("%d-%02d-%02d", y, m, d)
 
 	// Converts to byte
-	var currentTimeAsBytes = []byte(currentTime)
+	var creationDateAsBytes = []byte(creationDate)
 
 	//creates the meter record with the respective public key
 	var meter = Meter{PubKey: strpubkey}
@@ -158,12 +160,12 @@ func (s *SmartContract) registerMeter(stub shim.ChaincodeStubInterface, args []s
 
 	//registers meter in the ledger
 	stub.PutState(meterid, meterAsBytes)
-	stub.PutState(meterid, currentTimeAsBytes)
+	stub.PutState(meterid, creationDateAsBytes)
 
 	//loging...
 	fmt.Println("Registering meter: ", meter)
-	fmt.Println("Creation Date: ", currentTime)
-	fmt.Println("Creation Date (bytes): ", currentTimeAsBytes)
+	fmt.Println("Creation Date: ", creationDate)
+	fmt.Println("Creation Date (bytes): ", creationDateAsBytes)
 
 	//notify procedure success
 	return shim.Success(nil)
@@ -527,26 +529,26 @@ func (s *SmartContract) queryLedger(stub shim.ChaincodeStubInterface, args []str
 
 func (s *SmartContract) checkDate(stub shim.ChaincodeStubInterface, args []string) sc.Response {
 
-	//validate args vector lenght
+	//validate args vector length
 	if len(args) != 1 {
-		return shim.Error("It was expected 1 parameter: <meter ID> <date>")
+		return shim.Error("Expected 1 parameter: <date>")
 	}
 
-	//gets date argument
-	date := args[0]
+	//receives the data argument
+	creationDate := args[0]
 
-	//checks if there is a corresponding date in ledger
-	dateBytes, err := stub.GetState(date)
+	//retrieve the state for the given date from the ledger
+	creationDateAsBytes, err := stub.GetState(creationDate)
 	if err != nil {
-		return shim.Error("Error on retrieving data state: " + err.Error())
+		return shim.Error(err.Error())
 	}
 
-	//checks if state is empty
-	if dateBytes == nil {
+	//check if the state is empty
+	if creationDateAsBytes == nil {
 		return shim.Success([]byte("No corresponding date in ledger"))
 	}
 
-	//if date exists
+	//check if the date exists in the ledger
 	return shim.Success([]byte("Date exists in ledger"))
 }
 
