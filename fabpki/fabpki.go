@@ -123,12 +123,12 @@ func (s *SmartContract) Invoke(stub shim.ChaincodeStubInterface) sc.Response {
 }
 
 /*
-	SmartContract::registerMeter(...)
-	Does the register of a new meter into the ledger.
-	The meter is the base of the key|value structure.
-	The key constitutes the meter ID.
-	- args[0] - meter ID
-	- args[1] - the public key associated with the meter
+SmartContract::registerMeter(...)
+Does the register of a new meter into the ledger.
+The meter is the base of the key|value structure.
+The key constitutes the meter ID.
+- args[0] - meter ID
+- args[1] - the public key associated with the meter
 */
 func (s *SmartContract) registerMeter(stub shim.ChaincodeStubInterface, args []string) sc.Response {
 
@@ -141,6 +141,12 @@ func (s *SmartContract) registerMeter(stub shim.ChaincodeStubInterface, args []s
 	meterid := args[0]
 	strpubkey := args[1]
 
+	// Receives the date of creation
+	var currentTime = time.Now().String()
+
+	// Converts to byte
+	var currentTimeByte = []byte(currentTime)
+
 	//creates the meter record with the respective public key
 	var meter = Meter{PubKey: strpubkey}
 
@@ -149,23 +155,25 @@ func (s *SmartContract) registerMeter(stub shim.ChaincodeStubInterface, args []s
 
 	//registers meter in the ledger
 	stub.PutState(meterid, meterAsBytes)
+	stub.PutState(meterid, currentTimeByte)
 
 	//loging...
 	fmt.Println("Registering meter: ", meter)
+	fmt.Println("Creation Date: ", currentTime)
 
 	//notify procedure success
 	return shim.Success(nil)
 }
 
 /*
-	This method implements the insertion of encrypted measurements in the blockchain.
-	The encryptation must uses the same public key configured to the meter.
-	Notice that the informed measurement will be added (accumulated) to the the previous
-	encrypted measurement consumption information.
-	The vector args[] must contain two parameters:
-	- args[0] - meter ID
-	- args[1] - the legally relevant information, in a string representing a big int number.
-	- args[2] - the signature digest, in base64 encode format.
+This method implements the insertion of encrypted measurements in the blockchain.
+The encryptation must uses the same public key configured to the meter.
+Notice that the informed measurement will be added (accumulated) to the the previous
+encrypted measurement consumption information.
+The vector args[] must contain two parameters:
+- args[0] - meter ID
+- args[1] - the legally relevant information, in a string representing a big int number.
+- args[2] - the signature digest, in base64 encode format.
 */
 func (s *SmartContract) checkSignature(stub shim.ChaincodeStubInterface, args []string) sc.Response {
 
@@ -238,10 +246,10 @@ func (s *SmartContract) checkSignature(stub shim.ChaincodeStubInterface, args []
 }
 
 /*
-	This method is a dummy test that makes the endorser "sleep" for some seconds.
-	It is usefull to check either the sleeptime affects the performance of concurrent
-	transactions.
-	- args[0] - sleeptime (in seconds)
+This method is a dummy test that makes the endorser "sleep" for some seconds.
+It is usefull to check either the sleeptime affects the performance of concurrent
+transactions.
+- args[0] - sleeptime (in seconds)
 */
 func (s *SmartContract) sleepTest(stub shim.ChaincodeStubInterface, args []string) sc.Response {
 	//validate args vector lenght
@@ -268,9 +276,9 @@ func (s *SmartContract) sleepTest(stub shim.ChaincodeStubInterface, args []strin
 }
 
 /*
-   This method brings the changing history of a specific meter asset. It can be useful to
-   query all the changes that happened with a meter value.
-   - args[0] - asset key (or meter ID)
+This method brings the changing history of a specific meter asset. It can be useful to
+query all the changes that happened with a meter value.
+- args[0] - asset key (or meter ID)
 */
 func (s *SmartContract) queryHistory(stub shim.ChaincodeStubInterface, args []string) sc.Response {
 
@@ -329,10 +337,10 @@ func (s *SmartContract) queryHistory(stub shim.ChaincodeStubInterface, args []st
 }
 
 /*
-   This method brings the number of times that a meter asset was modified in the ledger.
-   It performs faster than queryHistory() method once it does not retrive any information,
-   it only counts the changes.
-   - args[0] - asset key (or meter ID)
+This method brings the number of times that a meter asset was modified in the ledger.
+It performs faster than queryHistory() method once it does not retrive any information,
+it only counts the changes.
+- args[0] - asset key (or meter ID)
 */
 func (s *SmartContract) countHistory(stub shim.ChaincodeStubInterface, args []string) sc.Response {
 
@@ -382,7 +390,7 @@ func (s *SmartContract) countHistory(stub shim.ChaincodeStubInterface, args []st
 }
 
 /*
-   This method counts the total of well succeeded transactions in the ledger.
+This method counts the total of well succeeded transactions in the ledger.
 */
 func (s *SmartContract) countLedger(stub shim.ChaincodeStubInterface) sc.Response {
 
@@ -452,9 +460,9 @@ func (s *SmartContract) countLedger(stub shim.ChaincodeStubInterface) sc.Respons
 }
 
 /*
-   This method executes a free query on the ledger, returning a vector of meter assets.
-   The query string must be a query expression supported by CouchDB servers.
-   - args[0] - query string.
+This method executes a free query on the ledger, returning a vector of meter assets.
+The query string must be a query expression supported by CouchDB servers.
+- args[0] - query string.
 */
 func (s *SmartContract) queryLedger(stub shim.ChaincodeStubInterface, args []string) sc.Response {
 
