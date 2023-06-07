@@ -24,12 +24,15 @@ cc_version = "1.0"
 if __name__ == "__main__":
 
     #test if the meter creation time was informed as argument
+    ''' 
+    # este código é executado independentemente de ter um argumento ou não!
     if len(sys.argv) != 1:
-        print("Usage:",sys.argv[0],"<meter creation date>")
+        print("Usage:",sys.argv[0],"<meter id>")
         exit(1)
+    '''
 
-    #get the date
-    creationDate = sys.argv[0]
+    #get meter id
+    meterid = sys.argv[0]
 
     #creates a loop object to manage async transactions
     loop = asyncio.get_event_loop()
@@ -52,7 +55,7 @@ if __name__ == "__main__":
         cc_name=cc_name, 
         cc_version=cc_version,
         fcn='checkDate', 
-        args=[creationDate], 
+        args=[meterid], 
         cc_pattern=None))
 
     #the signature checking returned... (true or false)
