@@ -147,7 +147,7 @@ func (s *SmartContract) registerMeter(stub shim.ChaincodeStubInterface, args []s
 	// Receives the date of creation
 	var currentTime = time.Now()
 	var y, m, d = currentTime.Date()
-	creationDate := fmt.Sprintf("%d-%02d-%02d", y, m, d)
+	creationDate := fmt.Sprintf("%d-%02d-%02d", y, m, d) // YYYY-MM-DD
 
 	// Converts to byte
 	var creationDateAsBytes = []byte(creationDate)
@@ -157,6 +157,7 @@ func (s *SmartContract) registerMeter(stub shim.ChaincodeStubInterface, args []s
 
 	//encapsulates meter in a JSON structure
 	meterAsBytes, _ := json.Marshal(meter)
+	// creationDateAsBytes, _ = json.Marshal(meter)
 
 	//registers meter in the ledger
 	stub.PutState(meterid, meterAsBytes)
@@ -528,28 +529,30 @@ func (s *SmartContract) queryLedger(stub shim.ChaincodeStubInterface, args []str
 }
 
 func (s *SmartContract) checkDate(stub shim.ChaincodeStubInterface, args []string) sc.Response {
-
-	//validate args vector length
+	// Validate args vector length
 	if len(args) != 1 {
-		return shim.Error("Expected 1 parameter: <date>")
+		return shim.Error("Expected 1 parameter: <meter ID>")
 	}
 
-	//receives the data argument
-	creationDate := args[0]
+	// get the meter id from arguments
+	meterid := args[0]
 
-	//retrieve the state for the given date from the ledger
-	creationDateAsBytes, err := stub.GetState(creationDate)
-	if err != nil {
-		return shim.Error(err.Error())
+	// retrieve the meter record from the ledger
+	creationDateAsBytes, err := stub.GetState(meterid)
+	if err != nil || creationDateAsBytes == nil {
+		return shim.Error("Error retrieving meter from the ledger")
 	}
 
-	//check if the state is empty
+	// check if its null
 	if creationDateAsBytes == nil {
-		return shim.Success([]byte("No corresponding date in ledger"))
+		return shim.Error("This meter was not created")
 	}
 
-	//check if the date exists in the ledger
-	return shim.Success([]byte("Date exists in ledger"))
+	// turns into string
+	var creationDate = string(creationDateAsBytes)
+
+	// returns creation date
+	return shim.Success([]byte(creationDate))
 }
 
 /*
