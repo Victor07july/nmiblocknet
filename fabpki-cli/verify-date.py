@@ -24,15 +24,14 @@ cc_version = "1.0"
 if __name__ == "__main__":
 
     #test if the meter creation time was informed as argument
-    ''' 
-    # este código é executado independentemente de ter um argumento ou não!
-    if len(sys.argv) != 1:
+ 
+    # (BUG) este código é executado independentemente de ter mais de um argumento ou não!
+    if len(sys.argv) != 2:
         print("Usage:",sys.argv[0],"<meter id>")
         exit(1)
-    '''
 
     #get meter id
-    meterid = sys.argv[0]
+    meterid = sys.argv[1]
 
     #creates a loop object to manage async transactions
     loop = asyncio.get_event_loop()
