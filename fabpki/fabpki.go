@@ -66,7 +66,7 @@ type Meter struct {
 }
 
 type Station struct {
-	TimeStamp   string `json:"timestamp"`
+	Timestamp   string `json:"timestamp"`
 	Temperature string `json:"temperature"`
 	WindSpeed   string `json:"windspeed"`
 	Insolation  string `json:"insolation"`
@@ -127,6 +127,12 @@ func (s *SmartContract) Invoke(stub shim.ChaincodeStubInterface) sc.Response {
 	} else if fn == "checkDate" {
 		//verify if a meter was created in a certain time
 		return s.checkDate(stub, args)
+	} else if fn == "registerStation" {
+		//register new meteorologic station in ledger
+		return s.registerStation(stub, args)
+	} else if fn == "checkStationData" {
+		// check all info from a station
+		return s.checkStationData(stub, args)
 	}
 
 	//function fn not implemented, notify error
@@ -579,6 +585,98 @@ func (s *SmartContract) checkDate(stub shim.ChaincodeStubInterface, args []strin
 
 	// returns creation date
 	return shim.Success([]byte(creationDate))
+}
+
+/*
+	TimeStamp   string `json:"timestamp"`
+	Temperature string `json:"temperature"`
+	WindSpeed   string `json:"windspeed"`
+	Insolation  string `json:"insolation"`
+*/
+
+func (s *SmartContract) registerStation(stub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	//validate args vector lenght
+	// CORREGE AQUI
+	if len(args) > 4 {
+		return shim.Error("It was expected the parameters: <station id> <temperature> <windspeed> <insolation> [encrypted inital consumption]")
+	}
+
+	//gets the parameters associated with the meter ID and the public key (in PEM format)
+	stationid := args[0] // recebe como parametro
+	temperature := args[1]
+	windspeed := args[2]
+	insolation := args[3]
+
+	// Receives the date of creation
+	var timestamp = time.Now()
+	var timestampString = timestamp.String()
+
+	//creates the meter record with the respective public key
+	// var station = Station{PubKey: strpubkey, MyDate: creationDate}
+	var station = Station{Temperature: temperature, WindSpeed: windspeed, Insolation: insolation, Timestamp: timestampString}
+
+	//encapsulates station data in a JSON structure
+	stationAsBytes, _ := json.Marshal(station)
+
+	//loging...
+	fmt.Println("Registering station: ")
+
+	//registers meter in the ledger
+	stub.PutState(stationid, stationAsBytes)
+
+	//notify procedure success
+	return shim.Success(nil)
+}
+
+func (s *SmartContract) checkStationData(stub shim.ChaincodeStubInterface, args []string) sc.Response {
+	// Validate args vector length
+	if len(args) != 1 {
+		return shim.Error("Expected 1 parameter: <meter ID>")
+	}
+
+	// get the station id from arguments
+	stationid := args[0]
+	fmt.Println(stationid)
+
+	// retrieve the station data from the ledger
+	stationAsBytes, err := stub.GetState(stationid)
+	if err != nil {
+		fmt.Println(err)
+		return shim.Error("Error retrieving station from the ledger")
+	}
+
+	// check if its null
+	if stationAsBytes == nil {
+		return shim.Error("Data info is empty")
+	}
+
+	//creates Station struct to manipulate returned bytes
+	MyStation := Station{}
+
+	//loging...
+	fmt.Println("Retrieving station data: ", stationAsBytes)
+
+	//convert bytes into a station object
+	json.Unmarshal(stationAsBytes, &MyStation)
+
+	// log
+	fmt.Println("Retrieving station data after unmarshall: ", MyStation)
+
+	var timestamp = string(MyStation.Timestamp)
+	var temperature = string(MyStation.Temperature)
+	var insolation = string(MyStation.Insolation)
+	var windspeed = string(MyStation.WindSpeed)
+
+	var info = "Timestamp: " + timestamp +
+		"\nTemperature: " + temperature +
+		"\nInsolation: " + insolation +
+		"\nWind speed: " + windspeed
+
+	// returns all station info
+	return shim.Success(
+		[]byte(info),
+	)
 }
 
 /*
