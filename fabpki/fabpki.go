@@ -62,6 +62,14 @@ type ECDSASignature struct {
 type Meter struct {
 	//PubKey ecdsa.PublicKey `json:"pubkey"`
 	PubKey string `json:"pubkey"`
+	MyDate string `json:"mydate"`
+}
+
+type Station struct {
+	TimeStamp   string `json:"timestamp"`
+	Temperature string `json:"temperature"`
+	WindSpeed   string `json:"windspeed"`
+	Insolation  string `json:"insolation"`
 }
 
 // PublicKeyDecodePEM method decodes a PEM format public key. So the smart contract can lead
@@ -150,23 +158,23 @@ func (s *SmartContract) registerMeter(stub shim.ChaincodeStubInterface, args []s
 	creationDate := fmt.Sprintf("%d-%02d-%02d", y, m, d) // YYYY-MM-DD
 
 	// Converts to byte
-	var creationDateAsBytes = []byte(creationDate)
+	// var creationDateAsBytes = []byte(creationDate)
 
 	//creates the meter record with the respective public key
-	var meter = Meter{PubKey: strpubkey}
+	var meter = Meter{PubKey: strpubkey, MyDate: creationDate}
 
 	//encapsulates meter in a JSON structure
 	meterAsBytes, _ := json.Marshal(meter)
 	// creationDateAsBytes, _ = json.Marshal(meter)
 
-	//registers meter in the ledger
-	stub.PutState(meterid, meterAsBytes)
-	stub.PutState(meterid, creationDateAsBytes)
-
 	//loging...
 	fmt.Println("Registering meter: ", meter)
 	fmt.Println("Creation Date: ", creationDate)
-	fmt.Println("Creation Date (bytes): ", creationDateAsBytes)
+	fmt.Println("Creation Date (bytes): ", meterAsBytes)
+
+	//registers meter in the ledger
+	stub.PutState(meterid, meterAsBytes)
+	// stub.PutState(meterid, creationDateAsBytes)
 
 	//notify procedure success
 	return shim.Success(nil)
@@ -536,20 +544,38 @@ func (s *SmartContract) checkDate(stub shim.ChaincodeStubInterface, args []strin
 
 	// get the meter id from arguments
 	meterid := args[0]
+	fmt.Println(meterid)
 
 	// retrieve the meter record from the ledger
-	creationDateAsBytes, err := stub.GetState(meterid)
-	if err != nil || creationDateAsBytes == nil {
+	meterAsBytes, err := stub.GetState(meterid)
+	if err != nil {
+		fmt.Println(err)
 		return shim.Error("Error retrieving meter from the ledger")
 	}
 
 	// check if its null
-	if creationDateAsBytes == nil {
-		return shim.Error("This meter was not created")
+	if meterAsBytes == nil {
+		return shim.Error("Data info is empty")
 	}
 
-	// turns into string
-	var creationDate = string(creationDateAsBytes)
+	//creates Meter struct to manipulate returned bytes
+	MyMeter := Meter{}
+
+	//loging...
+	fmt.Println("Retrieving meter bytes: ", meterAsBytes)
+
+	//convert bytes into a Meter object
+	json.Unmarshal(meterAsBytes, &MyMeter)
+
+	/*
+		turns into string
+		var creationDate = string(creationDateAsBytes)
+	*/
+
+	// log
+	fmt.Println("Retrieving meter after unmarshall: ", MyMeter)
+
+	var creationDate = string(MyMeter.MyDate)
 
 	// returns creation date
 	return shim.Success([]byte(creationDate))
