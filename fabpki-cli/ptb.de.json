@@ -36,7 +36,7 @@
       "users": {
         "Admin": {
           "cert": "../crypto-config/ordererOrganizations/orderer.nmi/users/Admin@orderer.nmi/msp/signcerts/Admin@orderer.nmi-cert.pem",
-          "private_key": "../crypto-config/ordererOrganizations/orderer.nmi/users/Admin@orderer.nmi/msp/keystore/d6c365f46c18c15b4115137126e4c22127cf5993208e50fa2ccfec0d0f01c181_sk"}
+          "private_key": "../crypto-config/ordererOrganizations/orderer.nmi/users/Admin@orderer.nmi/msp/keystore/34e819dfcd0aba0dbf83c5b5e31d13acff6bf7dc27a577a98875e8e987176295_sk"}
       }
     },
     "ptb.de":{
@@ -48,14 +48,14 @@
       "users": {
         "Admin": {
           "cert": "../crypto-config/peerOrganizations/ptb.de/users/Admin@ptb.de/msp/signcerts/Admin@ptb.de-cert.pem",
-          "private_key": "../crypto-config/peerOrganizations/ptb.de/users/Admin@ptb.de/msp/keystore/dffd2f5c6ac78eda4cded820b4b40e02c89195c6c311a87a15bca5439b186924_sk"
+          "private_key": "../crypto-config/peerOrganizations/ptb.de/users/Admin@ptb.de/msp/keystore/1e3ee97fbd1c1487de70d352b52016fd16db80d4356d69e1451a668659c3e92d_sk"
         }
       }
     }
   },
   "orderers":{
     "solo.orderer.nmi":{
-      "url":"10.21.241.66:7050",
+      "url":"10.0.2.15:7050",
       "grpcOptions": {
         "grpc.ssl_target_name_override": "solo.orderer.nmi",
         "grpc-max-send-message-length": 15
@@ -73,8 +73,8 @@
   },
   "peers":{
     "peer0.ptb.de":{
-      "url":"10.21.241.66:7051",
-      "eventUrl":"10.21.241.66:7053",
+      "url":"10.0.2.15:7051",
+      "eventUrl":"10.0.2.15:7053",
       "grpcOptions": {
         "grpc.ssl_target_name_override": "peer0.ptb.de",
         "grpc-max-send-message-length": 15

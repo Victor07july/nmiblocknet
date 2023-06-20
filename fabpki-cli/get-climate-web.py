@@ -26,11 +26,11 @@ if __name__ == "__main__":
     #test if the meter creation time was informed as argument
 
     if len(sys.argv) != 2:
-        print("Usage:",sys.argv[0],"<meter id>")
+        print("Usage:",sys.argv[0],"<\"city name\">")
         exit(1)
 
-    #get meter id
-    meterid = sys.argv[1]
+    #get city name
+    cidade = sys.argv[1]
 
     #creates a loop object to manage async transactions
     loop = asyncio.get_event_loop()
@@ -52,9 +52,9 @@ if __name__ == "__main__":
         peers=[callpeer],
         cc_name=cc_name, 
         cc_version=cc_version,
-        fcn='checkDate', 
-        args=[meterid], 
+        fcn='getWeatherFromWeb', 
+        args=[cidade], 
         cc_pattern=None))
 
     #the signature checking returned... (true or false)
-    print("The check date verification returned:\n", response)
+    print("Results from city weather info search:\n", response)
