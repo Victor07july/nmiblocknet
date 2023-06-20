@@ -72,6 +72,13 @@ type Station struct {
 	Insolation  string `json:"insolation"`
 }
 
+type WeatherAPI struct {
+	CityName    string `json:"cityname"`
+	Situation   string `json:"situation"`
+	Temperature string `json:"temperature"`
+	Timestamp   string `json:"timestamp"`
+}
+
 // PublicKeyDecodePEM method decodes a PEM format public key. So the smart contract can lead
 // with it, store in the blockchain, or even verify a signature.
 // - pemEncodedPub - A PEM-format public key
@@ -133,6 +140,12 @@ func (s *SmartContract) Invoke(stub shim.ChaincodeStubInterface) sc.Response {
 	} else if fn == "checkStationData" {
 		// check all info from a station
 		return s.checkStationData(stub, args)
+	} else if fn == "registerWeatherFromWeb" {
+		// register api weather info
+		return s.registerWeatherFromWeb(stub, args)
+	} else if fn == "getWeatherFromWeb" {
+		// gets api weather info
+		return s.getWeatherFromWeb(stub, args)
 	}
 
 	//function fn not implemented, notify error
@@ -672,6 +685,90 @@ func (s *SmartContract) checkStationData(stub shim.ChaincodeStubInterface, args 
 		"\nTemperature: " + temperature +
 		"\nInsolation: " + insolation +
 		"\nWind speed: " + windspeed
+
+	// returns all station info
+	return shim.Success(
+		[]byte(info),
+	)
+}
+
+func (s *SmartContract) registerWeatherFromWeb(stub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	//validate args vector lenght
+	if len(args) != 3 {
+		return shim.Error("It was expected the parameters: <\"city name\"> <situation> <temperature>")
+	}
+
+	//gets the parameters
+	cityName := args[0]
+	situation := args[1]
+	temperature := args[2]
+
+	// Receives the date of creation
+	var timestamp = time.Now()
+	var timestampString = timestamp.String()
+
+	//creates the meter record with the respective public key
+	// var station = Station{PubKey: strpubkey, MyDate: creationDate}
+	var weatherApi = WeatherAPI{CityName: cityName, Situation: situation, Temperature: temperature, Timestamp: timestampString}
+
+	//encapsulates station data in a JSON structure
+	weatherApiAsBytes, _ := json.Marshal(weatherApi)
+
+	//loging...
+	fmt.Println("Registering climate info from web...")
+
+	//registers meter in the ledger
+	stub.PutState(cityName, weatherApiAsBytes)
+
+	//notify procedure success
+	return shim.Success(nil)
+}
+
+func (s *SmartContract) getWeatherFromWeb(stub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	//validate args vector lenght
+	if len(args) != 1 {
+		return shim.Error("It was expected the parameters: <\"city name\">")
+	}
+
+	//gets the parameters
+	cityName := args[0]
+	fmt.Println(cityName)
+
+	// retrieve the station data from the ledger
+	weatherApiAsBytes, err := stub.GetState(cityName)
+	if err != nil {
+		fmt.Println(err)
+		return shim.Error("Error retrieving station from the ledger")
+	}
+
+	// check if its null
+	if weatherApiAsBytes == nil {
+		return shim.Error("No info registered for this city")
+	}
+
+	//creates Station struct to manipulate returned bytes
+	MyWeather := WeatherAPI{}
+
+	//loging...
+	fmt.Println("Retrieving station data: ", weatherApiAsBytes)
+
+	//convert bytes into a station object
+	json.Unmarshal(weatherApiAsBytes, &MyWeather)
+
+	// log
+	fmt.Println("Retrieving station data after unmarshall: ", MyWeather)
+
+	cityName = string(MyWeather.CityName)
+	situation := string(MyWeather.Situation)
+	temperature := string(MyWeather.Temperature)
+	timestamp := string(MyWeather.Timestamp)
+
+	var info = "Cityname: " + cityName +
+		"\nSituation: " + situation +
+		"\nTemperature: " + temperature +
+		"\nTimestamp: " + timestamp
 
 	// returns all station info
 	return shim.Success(
