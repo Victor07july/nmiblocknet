@@ -776,6 +776,57 @@ func (s *SmartContract) getWeatherFromWeb(stub shim.ChaincodeStubInterface, args
 	)
 }
 
+func (s *SmartContract) getWebWeatherHistory(stub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	// 2009-11-10 23:00:00 +0000 UTC m=+0.000000001
+	// SEPARE A DATA E HORA NO TYPE STRUCT
+	// PUXE SOMENTE A DATA NESTA FUNÇÃO (POR ENQUANTO)
+
+	//validate args vector lenght
+	if len(args) != 2 {
+		return shim.Error("It was expected 2 parameters: <key> <year-month-day>")
+	}
+
+	historyIer, err := stub.GetHistoryForKey(args[0])
+
+	//verifies if the history exists
+	if err != nil {
+		//fmt.Println(errMsg)
+		return shim.Error("Fail on getting ledger history")
+	}
+
+	for historyIer.HasNext() {
+		//increments iterator
+		queryResponse, err := historyIer.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		/*
+			- Pegar queryResponse.value da chave CityName (virá em Bytes. Separar em uma lista JSON)
+			- Separar Timestamp (formatado ou separado?) e comparar com o inserido
+			- Se coincidirem, retornar clima
+			- Se não, ir para o próximo
+			- Caso nenhum seja encontrado, retorne o aviso
+		*/
+
+		valorBytes := queryResponse.Value
+		_ = valorBytes
+
+		// Realizar unmarshal, pegar data e comparar com a inserida (len args 1)
+		// if data for igual...
+
+	}
+	historyIer.Close()
+
+	//loging...
+	fmt.Printf("Consulting ledger history, found %d\n records", counter)
+
+	//notify procedure success
+	return shim.Success(buffer.Bytes())
+}
+
+
 /*
  * The main function starts up the chaincode in the container during instantiate
  */
