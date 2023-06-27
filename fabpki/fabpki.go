@@ -29,8 +29,10 @@ import (
 	"time"
 
 	//these imports are for Hyperledger Fabric interface
-	"github.com/hyperledger/fabric/core/chaincode/shim"
-	sc "github.com/hyperledger/fabric/protos/peer"
+	//"github.com/hyperledger/fabric/core/chaincode/shim"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	//sc "github.com/hyperledger/fabric/protos/peer"
+	sc "github.com/hyperledger/fabric-protos-go/peer"
 )
 
 /* All the following functions are used to implement fabpki chaincode. This chaincode
@@ -65,6 +67,17 @@ type Meter struct {
 	MyDate string `json:"mydate"`
 }
 
+type Trajeto struct {
+	//estrutura de dados do trajeto
+	Distancia   string `json:"distancia"`
+	Combustivel string `json:"combustivel"`
+}
+
+type numero struct {
+	DIstancia   string `json:"distancia"`
+	Combustivel string `json:"combustivel"`
+}
+
 type Station struct {
 	Timestamp   string `json:"timestamp"`
 	Temperature string `json:"temperature"`
@@ -76,7 +89,9 @@ type WeatherAPI struct {
 	CityName    string `json:"cityname"`
 	Situation   string `json:"situation"`
 	Temperature string `json:"temperature"`
-	Timestamp   string `json:"timestamp"`
+	// Timestamp   string `json:"timestamp"`
+	Date string `json:"date"`
+	Hour string `json:"hour"`
 }
 
 // PublicKeyDecodePEM method decodes a PEM format public key. So the smart contract can lead
@@ -131,21 +146,22 @@ func (s *SmartContract) Invoke(stub shim.ChaincodeStubInterface) sc.Response {
 	} else if fn == "queryLedger" {
 		//execute a CouchDB query, args must include query expression
 		return s.queryLedger(stub, args)
-	} else if fn == "checkDate" {
-		//verify if a meter was created in a certain time
-		return s.checkDate(stub, args)
-	} else if fn == "registerStation" {
-		//register new meteorologic station in ledger
-		return s.registerStation(stub, args)
-	} else if fn == "checkStationData" {
-		// check all info from a station
-		return s.checkStationData(stub, args)
+
+	} else if fn == "EnumerateHistory" {
+		//execute a CouchDB query, args must include query expression
+		return s.EnumerateHistory(stub, args)
+	} else if fn == "Mynum" {
+		// função da Stephanie
+		return s.Mynum(stub, args)
 	} else if fn == "registerWeatherFromWeb" {
 		// register api weather info
 		return s.registerWeatherFromWeb(stub, args)
 	} else if fn == "getWeatherFromWeb" {
 		// gets api weather info
 		return s.getWeatherFromWeb(stub, args)
+	} else if fn == "queryWebWeatherHistory" {
+		// gets weather from past
+		return s.queryWebWeatherHistory(stub, args)
 	}
 
 	//function fn not implemented, notify error
@@ -171,29 +187,17 @@ func (s *SmartContract) registerMeter(stub shim.ChaincodeStubInterface, args []s
 	meterid := args[0]
 	strpubkey := args[1]
 
-	// Receives the date of creation
-	var currentTime = time.Now()
-	var y, m, d = currentTime.Date()
-	creationDate := fmt.Sprintf("%d-%02d-%02d", y, m, d) // YYYY-MM-DD
-
-	// Converts to byte
-	// var creationDateAsBytes = []byte(creationDate)
-
 	//creates the meter record with the respective public key
-	var meter = Meter{PubKey: strpubkey, MyDate: creationDate}
+	var meter = Meter{PubKey: strpubkey}
 
 	//encapsulates meter in a JSON structure
 	meterAsBytes, _ := json.Marshal(meter)
-	// creationDateAsBytes, _ = json.Marshal(meter)
-
-	//loging...
-	fmt.Println("Registering meter: ", meter)
-	fmt.Println("Creation Date: ", creationDate)
-	fmt.Println("Creation Date (bytes): ", meterAsBytes)
 
 	//registers meter in the ledger
 	stub.PutState(meterid, meterAsBytes)
-	// stub.PutState(meterid, creationDateAsBytes)
+
+	//loging...
+	fmt.Println("Registering meter: ", meter)
 
 	//notify procedure success
 	return shim.Success(nil)
@@ -243,6 +247,8 @@ func (s *SmartContract) checkSignature(stub shim.ChaincodeStubInterface, args []
 
 	//decode de public key to the internal format
 	pubkey := PublicKeyDecodePEM(MyMeter.PubKey)
+
+	fmt.Println("pubkey: ", pubkey)
 
 	//loging...
 	fmt.Println("Retrieving meter after unmarshall: ", MyMeter)
@@ -423,6 +429,89 @@ func (s *SmartContract) countHistory(stub shim.ChaincodeStubInterface, args []st
 	return shim.Success(buffer.Bytes())
 }
 
+func (s *SmartContract) EnumerateHistory(stub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	//validate args vector lenght
+	if !(len(args) == 3) {
+		return shim.Error("Eram esperado três parametros: Placa, Combustível e Distância")
+	}
+
+	//gets the parameters associated with the meter ID and the public key (in PEM format)
+	placa := args[0] // chave
+	combustivel := args[1]
+	distancia := args[2]
+	fmt.Println("Recebidos os dados: ", placa, " ", combustivel, " ", distancia)
+
+	//creates the meter record with the respective public key
+	var trajeto = Trajeto{Combustivel: combustivel, Distancia: distancia}
+
+	//encapsulates meter in a JSON structure
+	trajetoAsBytes, _ := json.Marshal(trajeto) //valor
+
+	//acesso a interface do blockchain para gravar informações
+	stub.PutState(placa, trajetoAsBytes)
+
+	//loging...
+	fmt.Println("Gravando o trajeto: ", trajeto)
+
+	//notify procedure success
+	return shim.Success(nil)
+}
+
+func (s *SmartContract) Mynum(stub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	//validate args vector lenght
+	if !(len(args) == 3) {
+		return shim.Error("Eram esperado três parametros: Placa, Combustível e Distância")
+	}
+
+	// obter os parâmetros passados
+	placa := args[0] //chave
+	Mynum1 := args[1]
+	Mynum2 := args[2]
+
+	// converter os valores para inteiros
+
+	combustivel, err := strconv.Atoi(Mynum1)
+	if err != nil {
+		return shim.Error("Erro ao converter o valor do combustível")
+	}
+
+	distancia, err := strconv.Atoi(Mynum2)
+	if err != nil {
+		return shim.Error("Erro ao converter o valor da distância")
+	}
+
+	// calcular a eficiência energética
+	eficiencia := float64(distancia) / float64(combustivel)
+	fmt.Println("Eficiência Energética:", eficiencia)
+
+	fmt.Println("Recebidos os dados:", placa, combustivel, distancia)
+
+	// criar o registro do trajeto com os respectivos valores
+	trajeto := Trajeto{
+		Combustivel: strconv.Itoa(combustivel),
+		Distancia:   strconv.Itoa(distancia),
+	}
+
+	// converter o trajeto em uma estrutura JSON
+	trajetoAsBytes, err := json.Marshal(trajeto)
+	if err != nil {
+		return shim.Error("Erro ao converter o trajeto em JSON")
+	}
+
+	// gravar o trajeto no estado do ledger
+	err = stub.PutState(placa, trajetoAsBytes)
+	if err != nil {
+		return shim.Error("Erro ao gravar o trajeto no estado do ledger")
+	}
+
+	fmt.Println("Gravando o trajeto:", trajeto)
+
+	// notificar o sucesso da execução
+	return shim.Success(nil)
+}
+
 /*
 This method counts the total of well succeeded transactions in the ledger.
 */
@@ -555,143 +644,6 @@ func (s *SmartContract) queryLedger(stub shim.ChaincodeStubInterface, args []str
 	return shim.Success(buffer.Bytes())
 }
 
-func (s *SmartContract) checkDate(stub shim.ChaincodeStubInterface, args []string) sc.Response {
-	// Validate args vector length
-	if len(args) != 1 {
-		return shim.Error("Expected 1 parameter: <meter ID>")
-	}
-
-	// get the meter id from arguments
-	meterid := args[0]
-	fmt.Println(meterid)
-
-	// retrieve the meter record from the ledger
-	meterAsBytes, err := stub.GetState(meterid)
-	if err != nil {
-		fmt.Println(err)
-		return shim.Error("Error retrieving meter from the ledger")
-	}
-
-	// check if its null
-	if meterAsBytes == nil {
-		return shim.Error("Data info is empty")
-	}
-
-	//creates Meter struct to manipulate returned bytes
-	MyMeter := Meter{}
-
-	//loging...
-	fmt.Println("Retrieving meter bytes: ", meterAsBytes)
-
-	//convert bytes into a Meter object
-	json.Unmarshal(meterAsBytes, &MyMeter)
-
-	/*
-		turns into string
-		var creationDate = string(creationDateAsBytes)
-	*/
-
-	// log
-	fmt.Println("Retrieving meter after unmarshall: ", MyMeter)
-
-	var creationDate = string(MyMeter.MyDate)
-
-	// returns creation date
-	return shim.Success([]byte(creationDate))
-}
-
-/*
-	TimeStamp   string `json:"timestamp"`
-	Temperature string `json:"temperature"`
-	WindSpeed   string `json:"windspeed"`
-	Insolation  string `json:"insolation"`
-*/
-
-func (s *SmartContract) registerStation(stub shim.ChaincodeStubInterface, args []string) sc.Response {
-
-	//validate args vector lenght
-	// CORREGE AQUI
-	if len(args) > 4 {
-		return shim.Error("It was expected the parameters: <station id> <temperature> <windspeed> <insolation> [encrypted inital consumption]")
-	}
-
-	//gets the parameters associated with the meter ID and the public key (in PEM format)
-	stationid := args[0] // recebe como parametro
-	temperature := args[1]
-	windspeed := args[2]
-	insolation := args[3]
-
-	// Receives the date of creation
-	var timestamp = time.Now()
-	var timestampString = timestamp.String()
-
-	//creates the meter record with the respective public key
-	// var station = Station{PubKey: strpubkey, MyDate: creationDate}
-	var station = Station{Temperature: temperature, WindSpeed: windspeed, Insolation: insolation, Timestamp: timestampString}
-
-	//encapsulates station data in a JSON structure
-	stationAsBytes, _ := json.Marshal(station)
-
-	//loging...
-	fmt.Println("Registering station: ")
-
-	//registers meter in the ledger
-	stub.PutState(stationid, stationAsBytes)
-
-	//notify procedure success
-	return shim.Success(nil)
-}
-
-func (s *SmartContract) checkStationData(stub shim.ChaincodeStubInterface, args []string) sc.Response {
-	// Validate args vector length
-	if len(args) != 1 {
-		return shim.Error("Expected 1 parameter: <meter ID>")
-	}
-
-	// get the station id from arguments
-	stationid := args[0]
-	fmt.Println(stationid)
-
-	// retrieve the station data from the ledger
-	stationAsBytes, err := stub.GetState(stationid)
-	if err != nil {
-		fmt.Println(err)
-		return shim.Error("Error retrieving station from the ledger")
-	}
-
-	// check if its null
-	if stationAsBytes == nil {
-		return shim.Error("Data info is empty")
-	}
-
-	//creates Station struct to manipulate returned bytes
-	MyStation := Station{}
-
-	//loging...
-	fmt.Println("Retrieving station data: ", stationAsBytes)
-
-	//convert bytes into a station object
-	json.Unmarshal(stationAsBytes, &MyStation)
-
-	// log
-	fmt.Println("Retrieving station data after unmarshall: ", MyStation)
-
-	var timestamp = string(MyStation.Timestamp)
-	var temperature = string(MyStation.Temperature)
-	var insolation = string(MyStation.Insolation)
-	var windspeed = string(MyStation.WindSpeed)
-
-	var info = "Timestamp: " + timestamp +
-		"\nTemperature: " + temperature +
-		"\nInsolation: " + insolation +
-		"\nWind speed: " + windspeed
-
-	// returns all station info
-	return shim.Success(
-		[]byte(info),
-	)
-}
-
 func (s *SmartContract) registerWeatherFromWeb(stub shim.ChaincodeStubInterface, args []string) sc.Response {
 
 	//validate args vector lenght
@@ -704,13 +656,21 @@ func (s *SmartContract) registerWeatherFromWeb(stub shim.ChaincodeStubInterface,
 	situation := args[1]
 	temperature := args[2]
 
-	// Receives the date of creation
-	var timestamp = time.Now()
-	var timestampString = timestamp.String()
+	// Receives the time of creation
+	timestamp := time.Now() // 	// 2009-11-10 23:00:00 +0000 UTC m=+0.000000001
+	//	timestampString := timestamp.String() 
+
+	// extract date
+	year, month, day := timestamp.Date()
+	dateString := fmt.Sprintf("%d-%02d-%02d", year, month, day)
+
+	// extract hour
+	hour, minute, second := timestamp.Clock()
+	hourString := fmt.Sprintf("%02d:%02d:%02d", hour, minute, second)
 
 	//creates the meter record with the respective public key
 	// var station = Station{PubKey: strpubkey, MyDate: creationDate}
-	var weatherApi = WeatherAPI{CityName: cityName, Situation: situation, Temperature: temperature, Timestamp: timestampString}
+	var weatherApi = WeatherAPI{CityName: cityName, Situation: situation, Temperature: temperature, Date: dateString, Hour: hourString}
 
 	//encapsulates station data in a JSON structure
 	weatherApiAsBytes, _ := json.Marshal(weatherApi)
@@ -763,12 +723,13 @@ func (s *SmartContract) getWeatherFromWeb(stub shim.ChaincodeStubInterface, args
 	cityName = string(MyWeather.CityName)
 	situation := string(MyWeather.Situation)
 	temperature := string(MyWeather.Temperature)
-	timestamp := string(MyWeather.Timestamp)
+	date := string(MyWeather.Date)
+	hour := string(MyWeather.Hour)
 
 	var info = "Cityname: " + cityName +
 		"\nSituation: " + situation +
 		"\nTemperature: " + temperature +
-		"\nTimestamp: " + timestamp
+		"\nTimestamp: " + date + " " + hour
 
 	// returns all station info
 	return shim.Success(
@@ -776,18 +737,14 @@ func (s *SmartContract) getWeatherFromWeb(stub shim.ChaincodeStubInterface, args
 	)
 }
 
-func (s *SmartContract) getWebWeatherHistory(stub shim.ChaincodeStubInterface, args []string) sc.Response {
-
-	// 2009-11-10 23:00:00 +0000 UTC m=+0.000000001
-	// SEPARE A DATA E HORA NO TYPE STRUCT
-	// PUXE SOMENTE A DATA NESTA FUNÇÃO (POR ENQUANTO)
-
-	//validate args vector lenght
+func (s *SmartContract) queryWebWeatherHistory(stub shim.ChaincodeStubInterface, args []string) sc.Response {
+	
 	if len(args) != 2 {
 		return shim.Error("It was expected 2 parameters: <key> <year-month-day>")
 	}
 
 	historyIer, err := stub.GetHistoryForKey(args[0])
+	wantedDate := args[1]
 
 	//verifies if the history exists
 	if err != nil {
@@ -795,8 +752,11 @@ func (s *SmartContract) getWebWeatherHistory(stub shim.ChaincodeStubInterface, a
 		return shim.Error("Fail on getting ledger history")
 	}
 
+	// flag de achou ou nao
+	flag := 0
+	errMsg := ""
+
 	for historyIer.HasNext() {
-		//increments iterator
 		queryResponse, err := historyIer.Next()
 		if err != nil {
 			return shim.Error(err.Error())
@@ -813,19 +773,42 @@ func (s *SmartContract) getWebWeatherHistory(stub shim.ChaincodeStubInterface, a
 		valorBytes := queryResponse.Value
 		_ = valorBytes
 
-		// Realizar unmarshal, pegar data e comparar com a inserida (len args 1)
-		// if data for igual...
+		MyWeather := WeatherAPI{}
+
+		json.Unmarshal(valorBytes, &MyWeather)
+		fmt.Println("Retrieving station data after unmarshall: ", MyWeather)
+
+		date := string(MyWeather.Date)
+
+		if wantedDate == date {
+			cityName := string(MyWeather.CityName) // talvez nem precise
+			situation := string(MyWeather.Situation)
+			temperature := string(MyWeather.Temperature)
+			date := string(MyWeather.Date)
+			hour := string(MyWeather.Hour)
+
+			var info = "Cityname: " + cityName +
+				"\nSituation: " + situation +
+				"\nTemperature: " + temperature +
+				"\nTimestamp: " + date + " " + hour
+
+			flag++
+			return shim.Success([]byte(info))
+		}
 
 	}
 	historyIer.Close()
 
 	//loging...
-	fmt.Printf("Consulting ledger history, found %d\n records", counter)
+	// fmt.Printf("Consulting ledger history, found %d\n records", counter)
 
-	//notify procedure success
-	return shim.Success(buffer.Bytes())
+	if flag == 0 {
+		// const shimErr = shim.Error("Não encontrado")
+		errMsg = "Não encontrado"
+	}
+
+	return shim.Error(errMsg)
 }
-
 
 /*
  * The main function starts up the chaincode in the container during instantiate
